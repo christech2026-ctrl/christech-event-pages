@@ -164,50 +164,62 @@
 
 <script>
   // REPLACE THIS WITH YOUR APPS SCRIPT URL
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJBlcJxKYZLHVaPjwCgusagBp1ejcir34D_9gI1MshSxucRNJQY2mUP25kbURrs8B0VA/exec";
+// Use this submit handler in your HTML (replaces the fetch block)
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwU82jdSINkcKqbTZiL2x0DbVIlGNpXq-t1NGDDI8E5PqFulZV99Coji872k-BTimIu9A/exec'; // your URL
 
-  const form = document.getElementById("registrationForm");
-  const successBox = document.getElementById("successBox");
-  const errorBox = document.getElementById("errorBox");
+document.getElementById('eventRegistrationForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // collect fields
+  const data = {
+    fullName: document.getElementById('fullName').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    contactNumber: document.getElementById('contactNumber').value.trim(),
+    institution: document.getElementById('institution').value.trim(),
+    eventName: document.getElementById('eventName').value,
+    eventLocation: document.getElementById('eventLocation').value,
+    eventDate: document.getElementById('eventDate').value,
+    eventTime: document.getElementById('eventTime').value
+  };
 
-    const data = {
-      fullName: document.getElementById("fullName").value,
-      email: document.getElementById("email").value,
-      contactNumber: document.getElementById("contactNumber").value,
-      institution: document.getElementById("institution").value,
+  // Convert to x-www-form-urlencoded body (no manual Content-Type header)
+  const body = new URLSearchParams(data);
 
-      // READ-ONLY EVENT VALUES
-      eventName: document.getElementById("eventName").value,
-      eventLocation: document.getElementById("eventLocation").value,
-      eventDate: document.getElementById("eventDate").value,
-      eventTime: document.getElementById("eventTime").value
-    };
+  // UI feedback (optional)
+  const submitBtn = document.getElementById('submitBtn');
+  const loading = document.getElementById('loading');
+  const message = document.getElementById('message');
+  if (submitBtn) submitBtn.disabled = true;
+  if (loading) loading.classList.add('active');
 
-    try {
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: body // browser sets Content-Type: application/x-www-form-urlencoded;charset=UTF-8
+      // do NOT set headers here; that would trigger preflight
+    });
 
-      const json = await res.json();
+    // Try to parse JSON response
+    const json = await res.json().catch(() => ({ status: res.ok ? 'success' : 'error' }));
 
-      if (json.status === "success") {
-        successBox.style.display = "block";
-        errorBox.style.display = "none";
-        form.reset();
-      } else {
-        throw new Error();
-      }
-
-    } catch (err) {
-      errorBox.style.display = "block";
-      successBox.style.display = "none";
+    if (json && json.status === 'success') {
+      if (message) { message.textContent = 'Thank you! Registration successful.'; message.className = 'message success active'; }
+      // reset form if you want: document.getElementById('eventRegistrationForm').reset();
+    } else {
+      const errMsg = (json && json.message) ? json.message : 'Submission failed';
+      if (message) { message.textContent = errMsg; message.className = 'message error active'; }
     }
-  });
+  } catch (err) {
+    console.error('Fetch error:', err);
+    if (message) { message.textContent = 'Network error — please try again'; message.className = 'message error active'; }
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+    if (loading) loading.classList.remove('active');
+    // hide message after a while
+    setTimeout(() => { if (message) message.classList.remove('active'); }, 6000);
+  }
+});
+
 </script>
 
 </body>
